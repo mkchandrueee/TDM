@@ -1,0 +1,33 @@
+flowchart LR
+    user["TIGR user"]
+
+    subgraph ui["UI: React application"]
+        pages["Workflow pages<br/>Scenario to Data, Source to Data,<br/>Data Sets, View Data"]
+        client["API client<br/>REST requests and responses"]
+        pages <--> client
+    end
+
+    subgraph api["API: FastAPI application"]
+        middleware["Request middleware<br/>request IDs and error handling"]
+        access["Identity and access checks<br/>workspace roles and permissions"]
+        routers["API routes<br/>scenario, source, data sets,<br/>privacy, reservations, jobs"]
+        services["Backend services<br/>validation, generation,<br/>privacy and lifecycle logic"]
+        persistence["Database access<br/>SQLAlchemy models and sessions"]
+        middleware --> access --> routers --> services --> persistence
+    end
+
+    subgraph database["Backend database: PostgreSQL"]
+        appData[("TIGR application data<br/>plans, jobs, datasets,<br/>records, permissions, audit")]
+        outbox[("Job outbox<br/>queued work events")]
+    end
+
+    worker["Background worker<br/>processes queued jobs"]
+
+    user --> pages
+    client -->|"HTTPS / REST request"| middleware
+    persistence <-->|"Read and write"| appData
+    persistence -->|"Queue long-running work"| outbox
+    outbox -->|"Claim job"| worker
+    worker -->|"Save job status and results"| appData
+    middleware -->|"HTTP response"| client
+    worker -.->|"UI checks job status"| client

@@ -1,0 +1,141 @@
+:root{
+  --app-font: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --text-xs: 0.75rem;
+  --text-sm: 0.8125rem;
+  --text-md: 0.875rem;
+  --text-lg: 1rem;
+  --heading-sm: 1.125rem;
+  --heading-md: 1.375rem;
+  --heading-lg: 1.75rem;
+  font-family: var(--app-font);
+  font-size: 16px;
+}
+
+*,*::before,*::after{font-family:var(--app-font)!important}
+body{font-size:var(--text-md);line-height:1.5}
+button,input,select,textarea{font-size:inherit}
+
+.brand strong,.login-brand strong{font-size:1.25rem}
+.brand small{font-size:var(--text-xs);line-height:1.3;letter-spacing:.025em}
+.workspace-picker>span,.role-preview>span,.nav-group>p{font-size:var(--text-xs);letter-spacing:.04em}
+.workspace-picker select,.breadcrumb,.role-preview strong,.role-preview select,.nav-link{font-size:var(--text-sm)}
+.user-text strong,.context-card strong{font-size:var(--text-sm)}
+.user-text small,.context-card small,.context-note,.phase-pill{font-size:var(--text-xs)}
+.page-heading h1{font-size:var(--heading-lg);line-height:1.2}
+.page-heading p,.welcome-copy p{font-size:var(--text-md);line-height:1.55}
+.eyebrow,.page-heading .eyebrow{font-size:var(--text-xs);line-height:1.4;letter-spacing:.075em}
+.welcome-copy h2{font-size:var(--heading-md);line-height:1.3}
+.welcome-kicker{font-size:var(--text-xs)}
+.section-title h2,.panel-heading h2,.connection-intro h2,.dataset-intro h2{font-size:var(--heading-sm);line-height:1.3}
+.section-title p,.panel-heading p,.dataset-intro p,.dataset-toolbar p{font-size:var(--text-xs);line-height:1.5}
+.stat-card>span,.stat-card>small,.activity-row strong,.activity-row small,.activity-row time,.stat-card>strong{font-size:var(--text-xs)}
+.button,.button.compact,.button-primary,.button-light{font-size:var(--text-sm)}
+.status-badge{font-size:var(--text-xs)}
+.form-field,.login-field{font-size:var(--text-sm);line-height:1.4}
+.form-field input,.form-field select,.form-field textarea,.login-field input,.login-field select{font-size:var(--text-md);line-height:1.4}
+.form-field small,.login-field small,.quiet-message,.cell-subtitle{font-size:var(--text-xs);line-height:1.45}
+.table-shell table,.scenario-mapping-table table{font-size:var(--text-sm)}
+.table-shell th,.scenario-mapping-table th{font-size:var(--text-xs);line-height:1.35;letter-spacing:.035em}
+.table-shell td,.scenario-mapping-table td{font-size:var(--text-sm);line-height:1.45}
+.alert,.scenario-notice{font-size:var(--text-sm);line-height:1.5}
+.connection-title strong,.dataset-name-button strong,.workspace-admin-row strong{font-size:var(--text-sm)}
+.connection-title small,.connection-updated,.dataset-name-button small,.dataset-version-label,.workspace-admin-row small{font-size:var(--text-xs);line-height:1.4}
+.dataset-reference-code{display:inline-block;color:#6e5ba8;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-weight:600;letter-spacing:.015em}
+.dataset-name-button .dataset-reference-code{color:#aaa4b5;font-weight:500}
+.dataset-summary-card strong{font-size:var(--heading-sm)}
+.dataset-summary-card small,.dataset-toolbar p,.dataset-version-picker>span:first-child,.dataset-version-picker select{font-size:var(--text-xs)}
+.dataset-modal-header h2{font-size:var(--heading-md)}
+.dataset-modal-header p,.dataset-modal-footer>span,.dataset-loading{font-size:var(--text-sm)}
+.dataset-tabs button{font-size:var(--text-sm)}
+.dataset-info>span,.dataset-info>strong,.dataset-schema-fields strong,.dataset-schema-fields code,.dataset-schema-fields small{font-size:var(--text-xs)}
+.dataset-schema-block h3,.dataset-provenance h3,.validation-evidence-card h3,.lineage-intro h3{font-size:var(--text-md)}
+.dataset-schema-block p,.dataset-provenance>p,.validation-evidence-card p,.lineage-intro p{font-size:var(--text-xs)}
+.scenario-hero h2,.scenario-section-heading h2{font-size:var(--heading-md);line-height:1.3}
+.scenario-hero p,.scenario-section-heading p,.scenario-preview-summary,.scenario-metadata-strip,.scenario-query-preview pre,.scenario-review-grid strong{font-size:var(--text-sm);line-height:1.5}
+.scenario-provider span,.scenario-provider strong,.scenario-steps small,.scenario-review-grid span,.scenario-query-preview small{font-size:var(--text-xs)}
+.scenario-mapping-header h3,.scenario-saved-plans h3,.scenario-relationships h3{font-size:var(--text-md)}
+.privacy-state-card span,.lock-summary span{font-size:var(--text-xs)}
+.privacy-state-card strong,.lock-summary strong{font-size:var(--text-sm)}
+.login-mark{font-size:1.5625rem}
+.login-welcome h1{font-size:var(--heading-md);line-height:1.25}
+.login-welcome p,.login-security-note,.login-error{font-size:var(--text-sm);line-height:1.5}
+.login-eyebrow,.login-footer{font-size:var(--text-xs)}
+.login-submit{font-size:var(--text-sm)}
+footer{font-size:var(--text-xs)}
+.updated,.empty-state strong,.dataset-empty h2,.connection-empty h2,.access-form h3{font-size:var(--text-sm)}
+.empty-state p,.connection-empty p,.dataset-empty p,.foundation-note p,.panel-heading>a{font-size:var(--text-xs)}
+.text-button,.dataset-row-actions .text-button{font-size:var(--text-xs)!important}
+.step-navigation li,.step-navigation li>span{font-size:var(--text-xs)}
+.workspace-picker>span,.workspace small,.nav-group>p,.role-preview>span{font-size:var(--text-xs)}
+.lineage-evidence span,.lineage-links,.lineage-card-head small,.lineage-ref-grid .dataset-info>strong{font-size:var(--text-xs)}
+.lineage-card-head .status-badge,.access-management-panel .status-badge{font-size:var(--text-xs)!important}
+.state-tile>small,.state-tile>strong,.validation-evidence-card dt,.validation-evidence-card dd{font-size:var(--text-xs)}
+.dataset-modal-footer>span,.dataset-tabs button,.dataset-schema-fields strong,.dataset-schema-fields code,.dataset-schema-fields small{font-size:var(--text-xs)}
+.scenario-query-preview,.scenario-query-preview pre,.scenario-query-preview small,.scenario-metadata-strip,.scenario-notice{font-size:var(--text-sm)}
+.connection-actions .text-button,.connection-meta,.connection-form-grid small,.connection-test-history small,.structure-field code,.nested-fields code{font-size:var(--text-xs)}
+.dataset-summary-card small,.dataset-info>span,.dataset-info>strong,.dataset-provenance>p,.dataset-schema-block p{font-size:var(--text-xs)}
+.dataset-mode-value{display:inline-flex;align-items:center;min-height:24px;padding:3px 9px;border:1px solid #e5dcf7;border-radius:999px;background:#f7f3ff;color:#57429a;font-size:var(--text-xs);font-weight:650;white-space:nowrap}
+.dataset-mode-value.is-synthetic{border-color:#8a42d7;background:#8a42d7;color:#fff}
+.dataset-mode-value.is-source-backed{border-color:#e5dcf7;background:#f7f3ff;color:#57429a}
+.dataset-mode-value.is-mode-unset{border-color:#e5e3ea;background:#f6f5f8;color:#666273}
+.dataset-pathway-cell{display:grid;justify-items:start;gap:5px}
+.reservation-dataset-select-row{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:end;gap:10px}
+.reservation-dataset-select-row>.form-field{margin:0;min-width:0}
+.reservation-dataset-view-button{height:38px;width:40px;display:grid;place-items:center;color:var(--purple)}
+.reservation-dataset-context{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px}
+.reservation-dataset-context>span{display:grid;gap:3px;min-width:145px;padding:9px 11px;border:1px solid var(--border);border-radius:8px;background:#faf9fc}
+.reservation-dataset-context small{color:var(--muted);font-size:var(--text-xs)}
+.reservation-dataset-context strong{color:var(--ink);font-size:var(--text-sm)}
+.reservation-calendar{display:grid;gap:12px}
+.reservation-calendar-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.reservation-calendar-toolbar>strong{color:var(--ink);font-size:var(--text-sm)}
+.reservation-calendar-toolbar>div{display:flex;gap:6px}
+.reservation-week-grid{display:grid;grid-template-columns:repeat(7,minmax(125px,1fr));gap:8px;overflow-x:auto;padding-bottom:4px}
+.reservation-week-day{min-height:180px;padding:9px;border:1px solid var(--border);border-radius:9px;background:#fbfafc}
+.reservation-week-day>header{display:flex;align-items:center;justify-content:space-between;padding-bottom:8px;border-bottom:1px solid var(--border);color:var(--ink);font-size:var(--text-xs)}
+.reservation-week-day>header span{color:var(--muted)}
+.reservation-week-empty{margin:12px 0;color:var(--muted);font-size:var(--text-xs)}
+.reservation-week-event{display:grid;gap:4px;margin-top:8px;padding:8px;border:1px solid #e8dcf7;border-radius:7px;background:#f8f3ff;color:#504267;font-size:var(--text-xs);overflow-wrap:anywhere}
+.reservation-week-event strong{color:var(--ink);font-size:var(--text-xs)}
+.reservation-week-event span,.reservation-week-event small{color:var(--muted);font-size:var(--text-xs)}
+.dataset-activity-icons{display:inline-flex;align-items:center;gap:5px;margin-left:8px;vertical-align:middle}
+.dataset-activity-icon-wrap{display:inline-grid;width:23px;height:23px;place-items:center;border-radius:7px}
+.dataset-activity-icon-wrap.reservation{background:#f5c842;color:#382151}
+.dataset-activity-icon-wrap.lock{background:#fdeceb;color:#b6433b}
+.dataset-activity-icons .dataset-reservation-icon,.dataset-activity-icons .dataset-lock-icon{color:currentColor}
+.reservation-event-active{border-color:#bce4d5;background:#eff9f5}
+.reservation-event-approved{border-color:#bce4d5;background:#eff9f5}
+.reservation-event-requested{border-color:#f0dfa5;background:#fff9e8}
+.login-brand span,.login-field small,.login-footer{font-size:var(--text-xs)}
+.phase-pill{font-size:14px!important;font-weight:600}
+.header-popover>strong,.header-popover>a,.profile-signout{font-size:var(--text-sm)}
+.sidebar-bottom .user-text strong{font-size:var(--text-sm)}
+.sidebar-bottom .user-text small{font-size:var(--text-xs)}
+small{font-size:var(--text-xs)!important}
+p{font-size:var(--text-sm)!important;line-height:1.5}
+.page-heading p,.welcome-copy p,.scenario-hero p,.scenario-section-heading p{font-size:var(--text-md)!important}
+.status-badge{font-size:var(--text-xs)!important}
+
+@media(max-width:760px){
+  .page-heading h1{font-size:1.5rem}
+  .page-heading p{font-size:var(--text-sm)}
+  .welcome-copy h2,.scenario-hero h2,.scenario-section-heading h2{font-size:var(--heading-sm)}
+  .table-shell th,.scenario-mapping-table th{font-size:12px}
+  .table-shell td,.scenario-mapping-table td{font-size:var(--text-xs)}
+  .button,.button.compact{font-size:var(--text-xs)}
+}
+.reservation-dataset-select-row{grid-template-columns:minmax(0,1fr) auto;align-items:end}
+.reservation-dataset-actions{display:flex;align-items:center;align-self:end;gap:8px;height:38px}
+.reservation-dataset-actions .dataset-activity-icons{display:inline-flex;align-items:center;gap:5px;margin:0;vertical-align:initial}
+.reservation-dataset-panels{display:grid;grid-template-columns:minmax(270px,.8fr) minmax(0,1.2fr);gap:14px;margin-top:16px;align-items:stretch}
+.reservation-dataset-picker-panel,.reservation-dataset-detail-panel{min-width:0;padding:14px;border:1px solid var(--border);border-radius:10px;background:#fff}
+.reservation-dataset-picker-panel{display:flex;flex-direction:column;justify-content:flex-start;gap:8px}
+.reservation-dataset-detail-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
+.reservation-dataset-detail-heading h3{margin:0;color:var(--ink);font-size:13px}
+.reservation-dataset-detail-heading>span{color:var(--muted);font-size:11px}
+.reservation-dataset-detail-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:0}
+.reservation-dataset-detail-grid>div{min-width:0;padding:9px;border:1px solid #efedf2;border-radius:8px;background:#fcfbfd}
+.reservation-dataset-detail-grid dt{margin:0 0 4px;color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.04em}
+.reservation-dataset-detail-grid dd{margin:0;overflow-wrap:anywhere;color:var(--ink);font-size:12px;font-weight:600}
+.reservation-dataset-detail-grid dd.reservation-unavailable-count{color:#b6433b}
+@media(max-width:760px){.reservation-dataset-panels{grid-template-columns:1fr}.reservation-dataset-detail-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}

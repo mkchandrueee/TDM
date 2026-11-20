@@ -1,0 +1,68 @@
+﻿flowchart LR
+    tde["Test Data Engineer"]
+    qa["QA Engineer"]
+
+    subgraph ui["UI: PII & Masking"]
+        page["Select source-backed version,<br/>scan fields, review findings,<br/>choose transformations and run masking<br/>frontend/src/PrivacyPage.tsx<br/>frontend/src/api.ts"]
+        settings["Workspace PII & Masking setting<br/>frontend/src/App.tsx"]
+        result["Privacy state, field classifications,<br/>masking status and run evidence"]
+    end
+
+    subgraph api["API: FastAPI"]
+        main["Mount privacy and dataset routes<br/>backend/tigr/main.py"]
+        routes["Scan, review findings, policy,<br/>masking and run status endpoints<br/>backend/tigr/privacy_api.py"]
+        classifier["Classify schema fields with local model<br/>backend/tigr/privacy_api.py<br/>backend/tigr/scenario_assistant.py"]
+        fresh["Re-execute approved source plan<br/>without persisting raw rows<br/>backend/tigr/privacy_api.py<br/>backend/tigr/scenario_generation.py<br/>backend/tigr/source_to_data.py"]
+        worker["Dispatch privacy masking job<br/>backend/tigr/outbox_worker.py<br/>calls run_masking_job() in privacy_api.py"]
+        store["Validate masked schema and leakage,<br/>store only validated output<br/>backend/tigr/dataset_services.py"]
+        publish["Publish only privacy-ready versions<br/>backend/tigr/dataset_api.py"]
+    end
+
+    subgraph tigrdb["TIGR PostgreSQL · backend/tigr/db.py"]
+        workspace["Workspace masking setting<br/>backend/tigr/iam.py"]
+        findings["PiiFinding and MaskingPolicy<br/>field review and approved rules<br/>backend/tigr/governance.py"]
+        jobs["MaskingRun, Job and OutboxEvent<br/>progress and evidence<br/>backend/tigr/governance.py<br/>backend/tigr/jobs.py"]
+        data["DataSet and DataSetVersion · backend/tigr/datasets.py<br/>DataSetRecord and artifact · backend/tigr/schema_records.py<br/>privacy and validation state"]
+    end
+
+    source["Approved source database<br/>re-read for source-backed masking"]
+    ollama["Local Ollama model<br/>field sensitivity suggestions"]
+    synthetic["Synthetic generation<br/>PII scan and masking skipped"]
+
+    tde --> page
+    page -->|"REST requests"| main --> routes
+    settings -->|"Configure workspace policy"| workspace
+    routes -->|"Read masking enabled flag"| workspace
+    routes -->|"Get data set schema and version"| data
+
+    page -->|"Scan output fields"| routes
+    routes --> classifier
+    classifier -->|"Field metadata only"| ollama
+    ollama -->|"Sensitivity and transformation suggestions"| classifier
+    classifier -->|"Findings"| findings
+    routes -->|"Return fields without record values"| page
+    tde -->|"Review or manually classify findings"| page
+    page -->|"Save review and masking policy"| routes
+    routes --> findings
+    routes -->|"Approve policy; queue masking run"| jobs
+
+    jobs --> worker
+    worker -->|"Load policy, findings and version"| routes
+    routes -->|"Re-extract source-backed rows in memory"| fresh
+    fresh -->|"Read using saved source provenance"| source
+    source -->|"Raw rows in worker memory"| fresh
+    fresh --> worker
+    worker -->|"Apply transformations, leakage check,<br/>and schema validation"| store
+    store -->|"Persist masked records and evidence"| data
+    worker -->|"Update run, job, validation and lineage"| jobs
+    routes -->|"Ready and compliant version"| publish
+    publish --> data
+
+    data -->|"Synthetic versions are already privacy-compliant;<br/>no PII masking workflow"| synthetic
+    qa -->|"View privacy summary only"| page
+    routes -->|"Return classifications and masking outcome,<br/>never record values"| result
+
+    module_note["The flow uses frontend/src/PrivacyPage.tsx, frontend/src/App.tsx and frontend/src/api.ts; backend/tigr/main.py, privacy_api.py, scenario_assistant.py, scenario_generation.py, source_to_data.py, outbox_worker.py, dataset_services.py, and dataset_api.py; plus database modules db.py, iam.py, governance.py, jobs.py, datasets.py, and schema_records.py."]
+    result ~~~ module_note
+    classDef bottomNote fill:#f6f2fa,stroke:#9c8ab0,color:#30243d
+    class module_note bottomNote

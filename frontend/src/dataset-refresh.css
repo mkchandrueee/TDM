@@ -1,0 +1,31 @@
+dialog.dataset-refresh-dialog:not([open]) {
+  display: none;
+}
+
+dialog.dataset-refresh-dialog[open] {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  width: min(520px, calc(100vw - 32px));
+  height: fit-content;
+  max-height: calc(100dvh - 32px);
+  margin: auto;
+  padding: 0;
+  overflow: auto;
+}
+
+dialog.dataset-refresh-dialog::backdrop {
+  background: #1d1b2b70;
+  backdrop-filter: blur(3px);
+}
+
+.dataset-refresh-dialog-body {
+  padding: 16px 24px;
+}
+
+.dataset-refresh-dialog > .dataset-modal-actions {
+  justify-content: flex-end;
+  margin: 0;
+  padding: 16px 24px;
+  border-top: 1px solid #eff0f4;
+}

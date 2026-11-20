@@ -1,0 +1,12 @@
+.federated-config-tab{display:grid;gap:12px;padding:16px 0}
+.federated-config-header{display:flex;align-items:center;justify-content:space-between;gap:14px}
+.federated-config-header h2{margin:0;color:#332b3d;font-size:16px}
+.federated-config-header p{margin:4px 0 0;color:#817b88;font-size:12px}
+.federated-config-header-actions{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+.federated-config-controls{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;align-items:end;gap:10px;padding:13px;border-radius:9px;background:#f7f3fb}
+.federated-config-controls .form-field{min-width:0;gap:5px;font-size:11px}
+.federated-config-controls input,.federated-config-controls select{height:36px;min-width:0}
+.federated-config-controls>.button{min-height:36px;white-space:nowrap}
+.federated-config-notice{display:flex;align-items:center;gap:7px;padding:9px 11px;border-radius:7px;background:#eef8f2;color:#28734b;font-size:12px}
+.federated-config-tab .federated-plan-builder{margin:0;padding:14px;border-color:#eeeaf1;box-shadow:none}
+@media(max-width:760px){.federated-config-header{align-items:flex-start;flex-direction:column}.federated-config-header-actions{width:100%;justify-content:flex-start}.federated-config-controls{grid-template-columns:1fr}.federated-config-controls>.button{justify-self:start}}

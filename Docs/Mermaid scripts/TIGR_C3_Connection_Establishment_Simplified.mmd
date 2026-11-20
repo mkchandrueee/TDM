@@ -1,0 +1,52 @@
+flowchart LR
+    user["Workspace Admin or TDE"]
+
+    subgraph ui["UI: React Connections page"]
+        wizard["Connection wizard<br/>connector, scope, credentials,<br/>database/schema or file settings"]
+        results["Connection status and<br/>discovered structure"]
+    end
+
+    subgraph api["API: FastAPI"]
+        middleware["Request middleware"]
+        auth["Workspace role authorization"]
+        routes["Connection routes<br/>connections.py"]
+        secrets["Credential encryption and resolution<br/>secrets.py"]
+        tester["Connection testing and<br/>structure discovery<br/>connection_testing.py"]
+    end
+
+    subgraph db["TIGR PostgreSQL"]
+        connection["WorkspaceConnection<br/>encrypted secret reference and config"]
+        structure["ConnectionTestRun<br/>StructureSnapshot<br/>audit events"]
+    end
+
+    database["External database<br/>PostgreSQL, MySQL, Oracle, SQL Server"]
+    file["Configured file root<br/>CSV, JSON, delimited text"]
+    workflows["Enabled connection used by<br/>Scenario to Data and Source to Data"]
+
+    user --> wizard
+    wizard -->|"REST request"| middleware --> auth --> routes
+
+    routes -->|"Discover databases and schemas"| tester
+    tester -->|"Connect with submitted credentials"| database
+    database -->|"Names and schema metadata"| tester
+    tester --> routes
+    routes -->|"Return discovery results"| results
+
+    wizard -->|"Save draft connection"| routes
+    routes -->|"Encrypt submitted credentials"| secrets
+    secrets -->|"Store encrypted reference"| connection
+    routes -->|"Store connection settings"| connection
+    routes -->|"Upload or configure file path"| file
+
+    wizard -->|"Test saved connection"| routes
+    routes --> tester
+    tester -->|"Resolve encrypted credentials"| secrets
+    secrets -->|"Resolved connection URL"| tester
+    tester -->|"Connect and inspect metadata"| database
+    tester -->|"Read file and inspect structure"| file
+    tester -->|"Test result and structure preview"| structure
+    routes -->|"Test status and safe message"| results
+
+    results -->|"Enable only after successful test"| routes
+    routes -->|"Set status to enabled"| connection
+    connection --> workflows

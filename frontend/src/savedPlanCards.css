@@ -1,0 +1,401 @@
+.saved-plans-panel-v3 {
+  overflow: hidden;
+  padding: 0;
+  border: 1px solid #e8e2ed;
+  border-radius: 14px;
+  background: linear-gradient(150deg, #fff 25%, #fbf8fe 100%);
+  box-shadow: 0 5px 18px rgb(61 35 84 / 5%);
+}
+
+.saved-plans-heading-v3 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 18px 22px;
+  border-bottom: 1px solid #eee9f2;
+}
+
+.saved-plans-heading-v3 .eyebrow {
+  display: block;
+  margin-bottom: 5px;
+  color: #735b8f;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .08em;
+}
+
+.saved-plans-heading-v3 h3 {
+  margin: 0;
+  color: #352d40;
+  font-size: 16px;
+}
+
+.saved-plans-heading-v3 p {
+  margin: 5px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.saved-plans-count-v3 {
+  flex: none;
+  padding: 6px 10px;
+  border: 1px solid #e7dff0;
+  border-radius: 20px;
+  background: #f7f3fb;
+  color: #60447f;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.saved-plans-rail-v3 {
+  display: flex;
+  gap: 14px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 18px 22px 20px;
+  scroll-padding-inline: 22px;
+  scroll-snap-type: x mandatory;
+  overscroll-behavior-x: contain;
+  scrollbar-color: #9b83b2 #f0ebf4;
+  scrollbar-width: thin;
+  background: linear-gradient(180deg, #fcfaff 0%, #f8f5fb 100%);
+}
+
+.saved-plan-card {
+  box-sizing: border-box;
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex: 0 0 320px;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+  min-height: 188px;
+  overflow: hidden;
+  padding: 14px;
+  border: 1px solid #e3d9ec;
+  border-radius: 13px;
+  background: radial-gradient(circle at 100% 0%, rgb(233 219 247 / 52%), transparent 38%), linear-gradient(145deg, #fff 30%, #fcf9ff 100%);
+  box-shadow: 0 3px 10px rgb(57 37 75 / 7%), inset 0 1px 0 #fff;
+  scroll-snap-align: start;
+  transition: border-color .2s ease, box-shadow .2s ease, transform .2s ease;
+}
+
+.saved-plan-card::before {
+  position: absolute;
+  z-index: 1;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #542092 0%, #9b69c8 52%, #e6c5ff 100%);
+  content: '';
+  transform: scaleX(.35);
+  transform-origin: left;
+  transition: transform .24s ease;
+}
+
+.saved-plan-card:hover,
+.saved-plan-card:focus-within {
+  transform: translateY(-3px);
+  border-color: #b79ccd;
+  box-shadow: 0 11px 24px rgb(57 37 75 / 13%), 0 0 0 3px rgb(112 67 154 / 7%);
+}
+
+.saved-plan-card:hover::before,
+.saved-plan-card:focus-within::before {
+  transform: scaleX(1);
+}
+
+.saved-plan-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.saved-plan-card__identity {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.saved-plan-card__icon {
+  display: grid;
+  flex: none;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border-radius: 10px;
+  background: linear-gradient(145deg, #f2eafb, #e9ddf5);
+  color: #70439a;
+  box-shadow: inset 0 1px 0 #fff, 0 2px 5px rgb(84 32 146 / 9%);
+  transition: transform .2s ease, box-shadow .2s ease;
+}
+
+.saved-plan-card:hover .saved-plan-card__icon {
+  transform: rotate(-4deg) scale(1.04);
+  box-shadow: inset 0 1px 0 #fff, 0 4px 9px rgb(84 32 146 / 16%);
+}
+
+.saved-plan-card__status {
+  flex: none;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  box-shadow: inset 0 0 0 1px rgb(80 55 104 / 5%);
+}
+
+.saved-plan-card__status--draft {
+  background: #fff3d5;
+  color: #805f0d;
+}
+
+.saved-plan-card__status--saved {
+  background: #eee8f6;
+  color: #5e4380;
+}
+
+.saved-plan-card__status--failed {
+  background: #fdeceb;
+  color: #a33c36;
+}
+
+.saved-plan-card__details {
+  display: grid;
+  align-content: start;
+  gap: 5px;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.saved-plan-card__details:focus-visible,
+.saved-plan-card__title:focus-visible,
+.saved-plan-card__resume:focus-visible,
+.saved-plan-card__quarantine:focus-visible {
+  outline: 2px solid #70439a;
+  outline-offset: 3px;
+}
+
+.saved-plan-card__title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #30263b;
+  font-family: var(--app-font);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.35;
+  text-align: left;
+  cursor: pointer;
+}
+
+.saved-plan-card__title > span:first-child {
+  overflow: hidden;
+  flex: 1 1 auto;
+  min-width: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.saved-plan-card__title > .dataset-activity-icons {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 3px;
+}
+
+.saved-plan-card:hover .saved-plan-card__title {
+  color: #542092;
+}
+
+.saved-plan-card__pathway,
+.saved-plan-card__step {
+  color: #655a70;
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.saved-plan-card__reference {
+  overflow: hidden;
+  color: #655a70;
+  font-size: 11px;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.saved-plan-card__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: auto;
+  padding-top: 9px;
+  border-top: 1px solid #f0edf2;
+  transition: border-color .2s ease;
+}
+
+.saved-plan-card:hover .saved-plan-card__footer {
+  border-color: #e2d5ee;
+}
+
+.saved-plan-card__updated {
+  min-width: 0;
+  color: #72677d;
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.saved-plan-card__actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 7px;
+}
+
+.saved-plan-card__quarantine {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: #777780;
+  cursor: pointer;
+  transition: background .16s ease, color .16s ease, transform .16s ease;
+}
+
+.saved-plan-card__quarantine:hover {
+  background: #f1f1f3;
+  color: #4d4d56;
+  transform: scale(1.05);
+}
+
+.saved-plan-card__quarantine:disabled {
+  opacity: .5;
+  cursor: wait;
+}
+
+.saved-plan-card__resume {
+  display: inline-flex;
+  min-height: 32px;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 11px;
+  border: 0;
+  border-radius: 7px;
+  background: linear-gradient(135deg, #f2ebf8, #ece2f4);
+  color: #542092;
+  font: 700 11px/1 var(--app-font);
+  white-space: nowrap;
+  cursor: pointer;
+  box-shadow: inset 0 1px 0 #fff;
+  transition: background .16s ease, box-shadow .16s ease, transform .16s ease;
+}
+
+.saved-plan-card__resume:hover {
+  transform: translateY(-1px);
+  background: linear-gradient(135deg, #e9dbf4, #dfcdee);
+  box-shadow: 0 3px 8px rgb(84 32 146 / 13%), inset 0 1px 0 #fff;
+}
+
+.saved-plan-confirm-overlay {
+  z-index: 90;
+}
+
+.saved-plan-confirm-modal {
+  width: min(100%, 520px);
+}
+
+.saved-plan-confirm-error {
+  margin: 14px 24px 0;
+}
+
+.saved-plan-confirm-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.saved-plan-confirm-submit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 34px;
+  padding: 0 13px;
+  border: 0;
+  border-radius: 6px;
+  background: #542092;
+  color: #fff;
+  font: 600 12px/1 var(--app-font);
+  cursor: pointer;
+}
+
+.saved-plan-confirm-submit:hover {
+  background: #3d176f;
+}
+
+.saved-plan-confirm-submit:disabled {
+  opacity: .65;
+  cursor: wait;
+}
+
+@media (max-width: 600px) {
+  .saved-plans-heading-v3 {
+    align-items: flex-start;
+    padding: 15px;
+  }
+
+  .saved-plans-rail-v3 {
+    gap: 10px;
+    padding: 14px 15px 17px;
+    scroll-padding-inline: 15px;
+  }
+
+  .saved-plan-card {
+    flex-basis: min(320px, calc(100vw - 64px));
+    min-height: 182px;
+    padding: 13px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .saved-plan-card,
+  .saved-plan-card::before,
+  .saved-plan-card__icon,
+  .saved-plan-card__quarantine,
+  .saved-plan-card__resume {
+    transition: none;
+  }
+
+  .saved-plan-card:hover,
+  .saved-plan-card:focus-within,
+  .saved-plan-card:hover .saved-plan-card__icon,
+  .saved-plan-card__quarantine:hover,
+  .saved-plan-card__resume:hover {
+    transform: none;
+  }
+}

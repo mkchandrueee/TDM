@@ -1,0 +1,26 @@
+.view-data-sql-modal {
+  width: min(720px, calc(100vw - 32px));
+  max-height: min(80vh, 760px);
+}
+
+.view-data-sql-modal .dataset-refresh-dialog-body {
+  overflow: auto;
+}
+
+.view-data-saved-query {
+  max-height: 55vh;
+  overflow: auto;
+  margin: 0;
+  padding: 16px;
+  border: 1px solid #e8e5ed;
+  border-radius: 9px;
+  background: #f8f7fa;
+  color: #322b3c;
+  font: 12px/1.6 ui-monospace, SFMono-Regular, Consolas, monospace;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.view-data-grid-actions > .icon-button {
+  flex: none;
+}

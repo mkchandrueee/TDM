@@ -1,0 +1,67 @@
+﻿flowchart LR
+    user["QA Engineer"]
+    admin["Admin or TDE<br/>grants connection operations"]
+
+    subgraph ui["UI: Self Servicing Data"]
+        page["Select granted connection, enter SQL,<br/>validate, execute, sample and save dataset<br/>frontend/src/SelfServicingDataPage.tsx<br/>frontend/src/api.ts"]
+        result["Execution status, sample,<br/>private or public data set"]
+    end
+
+    subgraph api["API: FastAPI"]
+        main["Mount SSD and dataset routes<br/>backend/tigr/main.py"]
+        routes["SSD drafts, validation,<br/>execute, sample, dataset and refresh<br/>backend/tigr/ssd.py"]
+        guard["Actor binding, membership and<br/>connection-scoped SSD grants<br/>backend/tigr/ssd_access.py<br/>backend/tigr/access.py"]
+        parser["Parse SQL and enforce allowed<br/>operations, objects and limits<br/>backend/tigr/ssd_sql.py"]
+        secrets["Resolve connection credentials<br/>backend/tigr/connection_testing.py<br/>backend/tigr/secrets.py"]
+        worker["Dispatch SSD execution jobs;<br/>run_job() performs source work<br/>backend/tigr/outbox_worker.py<br/>backend/tigr/ssd.py"]
+        services["Persist versioned data,<br/>validation, lineage and artifacts<br/>backend/tigr/dataset_services.py"]
+        publication["Publish data set version<br/>backend/tigr/datasets.py"]
+    end
+
+    subgraph tigrdb["TIGR PostgreSQL · backend/tigr/db.py"]
+        connection["WorkspaceConnection and AccessGrant<br/>backend/tigr/connection_models.py<br/>backend/tigr/iam.py"]
+        draft["SsdDraft and SsdRevision<br/>encrypted SQL inputs and validation<br/>backend/tigr/ssd_models.py"]
+        execution["SsdExecution, Job and OutboxEvent<br/>execution evidence and status<br/>backend/tigr/ssd_models.py<br/>backend/tigr/jobs.py"]
+        dataset["DataSet and DataSetVersion · backend/tigr/datasets.py<br/>DataSetRecord and publication · backend/tigr/schema_records.py<br/>saved results and provenance"]
+    end
+
+    source["Granted source database<br/>PostgreSQL, MySQL, Oracle or SQL Server"]
+
+    admin -->|"Grant select / insert / update / delete"| connection
+    user --> page
+    page -->|"REST requests"| main --> routes
+    routes --> guard
+    guard -->|"Check role, connection grant and operation"| connection
+    guard --> routes
+
+    page -->|"Save query and draft metadata"| routes
+    routes --> parser
+    parser -->|"Validated SQL metadata"| routes
+    routes -->|"Persist revision and encrypted inputs"| draft
+
+    page -->|"Validate / execute / sample"| routes
+    routes --> guard
+    routes --> parser
+    parser -->|"Approved operation and scope"| routes
+    routes -->|"Validate SELECT against source"| secrets
+    secrets --> connection
+    secrets -->|"Open source session"| source
+    source -->|"Validation result"| routes
+
+    routes -->|"Queue query, sample, dataset or refresh work"| execution
+    execution --> worker
+    worker -->|"Load revision and call run_job()"| routes
+    routes -->|"Resolve saved connection secret"| secrets
+    secrets -->|"Authorized source session for execution"| source
+    source -->|"Rows, affected count or commit result"| worker
+    worker -->|"Persist saved dataset and refresh version"| services
+    services --> dataset
+    worker -->|"Record result and execution evidence"| execution
+    routes -->|"Publish selected version"| publication
+    publication --> dataset
+    routes -->|"Return execution, sample or dataset status"| result
+
+    module_note["The flow uses frontend/src/SelfServicingDataPage.tsx and frontend/src/api.ts; backend/tigr/main.py, ssd.py, ssd_access.py, access.py, ssd_sql.py, connection_testing.py, secrets.py, outbox_worker.py, dataset_services.py, and datasets.py; plus database modules db.py, connection_models.py, iam.py, ssd_models.py, jobs.py, schema_records.py, and datasets.py."]
+    result ~~~ module_note
+    classDef bottomNote fill:#f6f2fa,stroke:#9c8ab0,color:#30243d
+    class module_note bottomNote

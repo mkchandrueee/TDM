@@ -1,0 +1,62 @@
+﻿flowchart LR
+    user["Test Data Engineer"]
+
+    subgraph ui["UI: Source to Data"]
+        page["Select source, map fields or enter SQL,<br/>set filters and generate data<br/>frontend/src/SourceToDataPage.tsx<br/>frontend/src/api.ts"]
+        result["Generation status, preview,<br/>saved data set or download"]
+    end
+
+    subgraph api["API: FastAPI"]
+        main["Mount API routes<br/>backend/tigr/main.py"]
+        routes["Source discovery, mappings,<br/>SQL validation and generation endpoints<br/>backend/tigr/source_to_data.py"]
+        connroutes["Connection configuration and access<br/>backend/tigr/connections.py"]
+        resolver["Resolve stored connection secret<br/>backend/tigr/connection_testing.py<br/>backend/tigr/secrets.py"]
+        query["Compile mappings and read source rows<br/>backend/tigr/scenario_generation.py"]
+        services["Create version, store data and provenance<br/>backend/tigr/dataset_services.py"]
+        worker["Process queued generation jobs<br/>backend/tigr/outbox_worker.py"]
+    end
+
+    subgraph tigrdb["TIGR PostgreSQL · backend/tigr/db.py"]
+        connection["WorkspaceConnection and structure<br/>backend/tigr/connection_models.py"]
+        plans["SourceDataMapping and SourceDataPlan<br/>backend/tigr/source_mappings.py"]
+        queries["Saved source query<br/>backend/tigr/source_queries.py"]
+        jobs["Job and OutboxEvent<br/>backend/tigr/jobs.py"]
+        datasets["DataSet and DataSetVersion · backend/tigr/datasets.py<br/>DataSetRecord · backend/tigr/schema_records.py<br/>audit and lineage"]
+    end
+
+    source["Approved source database or file<br/>PostgreSQL, MySQL, Oracle, SQL Server, CSV or JSON"]
+
+    user --> page
+    page -->|"REST requests"| main --> routes
+
+    page -->|"List enabled connections"| routes
+    routes --> connection
+    page -->|"Create or update source mapping"| routes
+    routes --> plans
+    page -->|"Validate or preview SQL"| routes
+    routes --> queries
+    routes -->|"Resolve credentials and inspect source"| resolver
+    resolver --> connection
+    resolver -->|"Connect using resolved secret"| source
+    source -->|"Schema, validation or preview rows"| routes
+    routes -->|"Return source and query details"| page
+
+    page -->|"Generate from mapping or SQL"| routes
+    routes -->|"Save request and create version"| datasets
+    routes -->|"Queue job"| jobs
+    jobs --> worker
+    worker -->|"Calls source generation job in source_to_data.py"| routes
+    routes -->|"Load mapping/query and resolve source"| plans
+    routes --> resolver
+    resolver -->|"Authorized source connection"| query
+    query -->|"Read selected and filtered rows"| source
+    source --> query
+    query -->|"Generated source-backed records"| services
+    services -->|"Persist records, version and provenance"| datasets
+    routes -->|"Update job, audit and lineage"| jobs
+    routes -->|"Return status and data set details"| result
+
+    module_note["The flow uses frontend/src/SourceToDataPage.tsx and frontend/src/api.ts; backend/tigr/main.py, source_to_data.py, connections.py, connection_testing.py, secrets.py, scenario_generation.py, dataset_services.py, and outbox_worker.py; plus database modules db.py, connection_models.py, source_mappings.py, source_queries.py, jobs.py, datasets.py, and schema_records.py."]
+    result ~~~ module_note
+    classDef bottomNote fill:#f6f2fa,stroke:#9c8ab0,color:#30243d
+    class module_note bottomNote

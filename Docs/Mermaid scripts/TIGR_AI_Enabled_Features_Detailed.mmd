@@ -1,0 +1,113 @@
+﻿flowchart LR
+    subgraph people["People"]
+        qa["QA Engineer"]
+        tde["Test Data Engineer"]
+    end
+
+    subgraph ui["React user interface"]
+        direction TB
+        scenarioUI["Scenario-to-Data page<br/>describe test need · review suggestions<br/>preview · request generation"]
+        privacyUI["PII & Masking page<br/>scan · review fields<br/>approve policy · run masking"]
+        apiClient["Shared API client<br/>frontend/src/api.ts"]
+        scenarioUI --> apiClient
+        privacyUI --> apiClient
+    end
+
+    subgraph api["FastAPI request layer"]
+        direction TB
+        http["CORS and HTTP request handling"]
+        context["Correlation ID and request context"]
+        identity["Actor binding<br/>workspace membership · role checks"]
+        scenarioAPI["Scenario routes<br/>scenario_api.py"]
+        privacyAPI["Privacy routes<br/>privacy_api.py"]
+        validation["Request validation<br/>safe error responses"]
+        http --> context --> identity
+        identity --> scenarioAPI
+        identity --> privacyAPI
+        scenarioAPI --> validation
+        privacyAPI --> validation
+    end
+
+    subgraph ai["AI orchestration · backend/tigr"]
+        direction TB
+        planFlow["Scenario plan orchestration<br/>scenario_api.py<br/>plan · schema/query assistance stages"]
+generationWorker["Generation worker<br/>scenario_generation.py"]
+        intent["Requirement interpretation<br/>business intent · entities<br/>criteria · exclusions"]
+        mapping["Schema grounding<br/>field mapping · joins · filters<br/>criteria coverage · schema notes"]
+        queryAI["SQL assistance<br/>query generation and review<br/>output-field checks / repair"]
+        syntheticAI["Synthetic row generation<br/>scenario_assistant.py<br/>create test-only values and relationships"]
+        piiFlow["PII field classification<br/>privacy_api.py · metadata only<br/>category · sensitivity · confidence"]
+        assistant["Assistant adapter<br/>scenario_assistant.py<br/>OllamaScenarioAssistant"]
+        config["Model configuration<br/>TIGR_OLLAMA_URL<br/>TIGR_OLLAMA_MODEL<br/>timeout · auto model discovery"]
+        planFlow --> intent
+        planFlow --> mapping
+        planFlow --> queryAI
+        generationWorker --> syntheticAI
+        piiFlow --> assistant
+        intent --> assistant
+        mapping --> assistant
+        queryAI --> assistant
+        syntheticAI --> assistant
+        config -. "configures" .-> assistant
+    end
+
+    subgraph model["Local model runtime"]
+        ollama["Ollama on configured host<br/>/api/tags · /api/chat"]
+        selectedModel["Configured local model<br/>for example Gemma"]
+        ollama --> selectedModel
+    end
+
+    subgraph safeguards["Deterministic controls and human review"]
+        direction TB
+        review["User reviews scenario suggestions<br/>and generated plan"]
+        sqlGuard["SQL / source controls<br/>validation · read-only bounded access<br/>for source-backed generation"]
+        piiReview["TDE reviews PII findings<br/>chooses transformations and approves policy"]
+        masking["Masking and output checks<br/>apply approved rules · check schema<br/>and privacy readiness"]
+        dataValidation["Dataset validation<br/>field types · required fields<br/>relationships · lifecycle gates"]
+    end
+
+    subgraph async["Jobs and persistence"]
+        direction TB
+        jobAPI["Job and outbox services<br/>jobs.py · outbox_worker.py"]
+        datasets["Dataset services<br/>dataset_services.py · datasets.py<br/>governance.py"]
+        postgres[("TIGR PostgreSQL<br/>scenario plans · jobs/outbox<br/>datasets · versions · records<br/>PII findings · masking policies/runs<br/>lineage · validation · audit")]
+        jobAPI --> datasets
+        datasets --> postgres
+        jobAPI --> postgres
+    end
+
+    subgraph sources["Configured data connections"]
+        sourceDB[("PostgreSQL / MySQL sources<br/>source records read by backend only")]
+        files[("Configured CSV / JSON files")]
+    end
+
+    qa --> scenarioUI
+    tde --> scenarioUI
+    tde --> privacyUI
+    apiClient -->|"HTTPS / REST"| http
+    validation -->|"API response"| apiClient
+    scenarioAPI --> planFlow
+    planFlow --> generationWorker
+    privacyAPI --> piiFlow
+    assistant <-->|"local model request / JSON response"| ollama
+
+    mapping -->|"suggestions returned for review"| review
+    queryAI -->|"query proposal returned for review"| review
+    review -->|"approved plan"| sqlGuard
+    sqlGuard -->|"source-backed extraction"| sourceDB
+    sqlGuard -->|"file-backed extraction"| files
+    syntheticAI -->|"generated synthetic rows"| dataValidation
+    sourceDB -->|"schema metadata for grounding"| planFlow
+    sourceDB -->|"source result rows; no LLM path"| dataValidation
+    files -->|"source result rows; no LLM path"| dataValidation
+    dataValidation -->|"validated output"| jobAPI
+    postgres -->|"dataset field metadata; no record values"| piiFlow
+    piiFlow -->|"findings saved for human review"| postgres
+    piiReview --> masking
+    piiReview -->|"approved policy and finding decisions"| postgres
+    masking --> dataValidation
+    jobAPI -.->|"status polling through API"| apiClient
+
+
+
+

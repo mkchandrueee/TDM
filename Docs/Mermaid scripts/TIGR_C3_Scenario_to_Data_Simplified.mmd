@@ -1,0 +1,57 @@
+﻿flowchart LR
+    user["Test Data Engineer"]
+
+    subgraph ui["UI: Scenario to Data"]
+        page["Requirement, schema, mapping,<br/>filters and generation review<br/>frontend/src/ScenarioToDataPage.tsx<br/>frontend/src/api.ts"]
+        status["Plan and generation status<br/>Preview or download data"]
+    end
+
+    subgraph api["API: FastAPI"]
+        main["API bootstrap<br/>backend/tigr/main.py"]
+        routes["Scenario endpoints: plans, schema,<br/>query, preview and generation<br/>backend/tigr/scenario_api.py"]
+        generation["Compile queries, validate mappings,<br/>generate synthetic or read source rows<br/>backend/tigr/scenario_generation.py"]
+        assistant["Ollama schema and synthetic data<br/>backend/tigr/scenario_assistant.py"]
+        services["Create versions, store records,<br/>validation and artifact metadata<br/>backend/tigr/dataset_services.py"]
+        worker["Process queued generation jobs<br/>backend/tigr/outbox_worker.py"]
+    end
+
+    subgraph tigrdb["TIGR PostgreSQL · backend/tigr/db.py"]
+        plans["ScenarioPlan<br/>requirements and mappings<br/>backend/tigr/scenarios.py"]
+        job["Job and OutboxEvent<br/>generation status<br/>backend/tigr/jobs.py"]
+        datasets["DataSet and DataSetVersion · backend/tigr/datasets.py<br/>DataSetRecord · backend/tigr/schema_records.py<br/>lineage and audit"]
+    end
+
+    source["Enabled source connection<br/>PostgreSQL, MySQL or file"]
+    model["Local Ollama model<br/>synthetic mode"]
+
+    user --> page
+    page -->|"REST requests"| main --> routes
+    routes -->|"Save or load plan"| plans
+    routes -->|"Schema and synthetic data requests"| assistant
+    assistant -->|"Prompt and model response"| model
+    model --> assistant
+    assistant --> routes
+
+    routes -->|"Source metadata or preview"| generation
+    generation -->|"Read mapped data"| source
+    source --> generation
+    generation --> routes
+    routes -->|"Plan and preview response"| page
+
+    page -->|"Request generation"| routes
+    routes -->|"Create dataset version and queue job"| datasets
+    routes -->|"Persist generation request"| job
+    job --> worker
+    worker -->|"Calls run_scenario_job() in scenario_api.py"| routes
+    routes --> generation
+    generation -->|"Synthetic rows when selected"| assistant
+    generation -->|"Read source rows when selected"| source
+    generation -->|"Generated records"| services
+    services -->|"Store records and version metadata"| datasets
+    routes -->|"Update job and audit state"| job
+    routes -->|"Return status and generated dataset"| status
+
+    module_note["The flow uses frontend/src/ScenarioToDataPage.tsx and frontend/src/api.ts; backend/tigr/main.py, scenario_api.py, scenario_generation.py, scenario_assistant.py, dataset_services.py, and outbox_worker.py; plus the database modules db.py, scenarios.py, jobs.py, datasets.py, and schema_records.py."]
+    status ~~~ module_note
+    classDef bottomNote fill:#f6f2fa,stroke:#9c8ab0,color:#30243d
+    class module_note bottomNote

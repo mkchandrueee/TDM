@@ -1,0 +1,63 @@
+﻿flowchart LR
+    qa["QA Engineer"]
+    approver["Test Data Engineer or Admin"]
+
+    subgraph ui["UI: Reservations & Locks"]
+        page["Select latest published version,<br/>request window and manage lock lease<br/>frontend/src/ReservationsPage.tsx<br/>frontend/src/api.ts"]
+        view["View Data access uses<br/>reservation and lock state<br/>frontend/src/ViewDataPage.tsx"]
+    end
+
+    subgraph api["API: FastAPI"]
+        main["Mount routes and bind actor<br/>backend/tigr/main.py<br/>backend/tigr/ssd_access.py"]
+        routes["Reservation requests, approval,<br/>lock acquire, renew, release<br/>backend/tigr/reservations_api.py"]
+        datasetAccess["Latest-version, publication,<br/>expiry and data access checks<br/>backend/tigr/dataset_api.py<br/>backend/tigr/dataset_access_lifecycle.py"]
+        claims["Claim source entities and validate<br/>fencing tokens / overlapping locks<br/>backend/tigr/entity_claims.py"]
+        maintenance["Reconcile stale entity claims<br/>backend/tigr/entity_lock_operations.py<br/>backend/tigr/cli.py"]
+    end
+
+    subgraph tigrdb["TIGR PostgreSQL · backend/tigr/db.py"]
+        access["Workspace membership and grants<br/>backend/tigr/iam.py"]
+        reservation["DataUseRequest and DataSetReservation<br/>backend/tigr/governance.py"]
+        locks["DataSetLock and EntityClaim<br/>lease, fencing token and claims<br/>backend/tigr/governance.py"]
+        datasets["DataSet and DataSetVersion<br/>expiry, publication and provenance<br/>backend/tigr/datasets.py"]
+        lineage["Audit and lineage events<br/>backend/tigr/schema_records.py"]
+    end
+
+    qa --> page
+    approver --> page
+    page -->|"REST requests"| main --> routes
+    routes -->|"Check membership and role"| access
+    routes -->|"Check latest published, compliant,<br/>unexpired version"| datasetAccess
+    datasetAccess --> datasets
+
+    page -->|"QA requests reservation window"| routes
+    routes -->|"Save pending use request"| reservation
+    approver -->|"Approve or deny"| routes
+    routes -->|"Approval books scheduled reservation"| reservation
+
+    page -->|"Acquire lock for selected version"| routes
+    routes -->|"Require approved active reservation for QA"| reservation
+    routes -->|"Create exclusive lease and fencing token"| locks
+    routes -->|"Claim matching source records"| claims
+    claims -->|"Read source identity metadata"| datasets
+    claims --> locks
+
+    page -->|"Renew or release with fencing token"| routes
+    routes -->|"Renew only within reservation and expiry"| reservation
+    routes -->|"Update lease or release state"| locks
+    routes -->|"Close associated entity claims"| claims
+    routes -->|"Record audit and lineage"| lineage
+
+    routes -->|"Reconcile expired reservation / lease"| reservation
+    routes -->|"Expire lock when lease or reservation ends"| locks
+    maintenance -->|"Close stale entity claims"| claims
+    maintenance --> locks
+
+    page -->|"Open data set"| view
+    view -->|"Check access, expiry, reservation and lock"| datasetAccess
+    datasetAccess -->|"Private SSD owner bypasses reservation/lock;<br/>expired versions remain inaccessible"| view
+
+    module_note["The flow uses frontend/src/ReservationsPage.tsx, frontend/src/ViewDataPage.tsx and frontend/src/api.ts; backend/tigr/main.py, ssd_access.py, reservations_api.py, dataset_api.py, dataset_access_lifecycle.py, entity_claims.py, entity_lock_operations.py, and cli.py; plus database modules db.py, iam.py, governance.py, datasets.py, and schema_records.py."]
+    view ~~~ module_note
+    classDef bottomNote fill:#f6f2fa,stroke:#9c8ab0,color:#30243d
+    class module_note bottomNote

@@ -1,0 +1,77 @@
+﻿flowchart LR
+    user["TIGR users<br/>QA Engineer · Test Data Engineer · Admin"]
+
+    subgraph ui["User interface · React"]
+        direction TB
+        connections["Connections<br/>including Federated Data"]
+        requests["Test Data Requests"]
+        datasets["Data Sets<br/>details · lineage · view"]
+        generation["Data generation<br/>Scenario-to-Data<br/>Source-to-Data · SQL-to-Data"]
+        ssd["Self-servicing Data"]
+        governance["PII & Masking"]
+        operations["Reservations & Locks<br/>Jobs · Dashboard"]
+        admin["Administration"]
+        apiClient["API client<br/>frontend/src/api.ts"]
+        connections --> apiClient
+        requests --> apiClient
+        datasets --> apiClient
+        generation --> apiClient
+        ssd --> apiClient
+        governance --> apiClient
+        operations --> apiClient
+        admin --> apiClient
+    end
+
+    subgraph api["API layer · FastAPI"]
+        direction TB
+        cors["CORS and HTTP handling"]
+        requestContext["Correlation ID<br/>request context"]
+        actor["Actor binding<br/>identity and workspace access"]
+        routers["Feature routers<br/>Connections · Tickets · Datasets<br/>Generation · SSD · Privacy<br/>Reservations · Jobs · Dashboard · Admin"]
+        errors["Validation and error responses"]
+        cors --> requestContext --> actor --> routers --> errors
+    end
+
+    subgraph backend["Backend components"]
+        direction TB
+        connectionSvc["Connection services<br/>test · schema · secret references"]
+        generationSvc["Generation services<br/>scenario · source · SQL · SSD"]
+        datasetSvc["Dataset services<br/>versions · validation · publication<br/>view · lineage · expiry"]
+        governanceSvc["Governance services<br/>PII scan · masking · audit"]
+        workflowSvc["Workflow services<br/>tickets · reservations · entity locks"]
+        jobSvc["Job and outbox processing"]
+        persistence["Database layer<br/>SQLAlchemy models and sessions"]
+        connectionSvc --> persistence
+        generationSvc --> persistence
+        generationSvc --> jobSvc
+        datasetSvc --> persistence
+        governanceSvc --> persistence
+        governanceSvc --> jobSvc
+        workflowSvc --> persistence
+        jobSvc --> persistence
+    end
+
+    subgraph data["Data stores and external systems"]
+        direction TB
+        iam[("TIGR PostgreSQL · IAM<br/>users · workspaces · memberships · grants")]
+        dataops[("TIGR PostgreSQL · DataOps<br/>datasets · records · plans · tickets<br/>reservations · locks · jobs · audit")]
+        sources[("Configured source systems<br/>databases · CSV and JSON files")]
+        ollama["Optional local Ollama model<br/>scenario assistance"]
+    end
+
+    user --> ui
+    apiClient -->|"HTTPS / REST"| cors
+    errors -->|"HTTP response"| apiClient
+    routers --> connectionSvc
+    routers --> generationSvc
+    routers --> datasetSvc
+    routers --> governanceSvc
+    routers --> workflowSvc
+    routers --> jobSvc
+    persistence --> iam
+    persistence --> dataops
+    connectionSvc <-->|"Test and inspect"| sources
+    generationSvc -->|"Read source data"| sources
+    generationSvc -.->|"Optional assistant"| ollama
+    jobSvc -.->|"Status polling via APIs"| routers
+

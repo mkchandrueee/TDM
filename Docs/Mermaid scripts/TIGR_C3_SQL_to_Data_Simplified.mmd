@@ -1,0 +1,64 @@
+﻿flowchart LR
+    user["Test Data Engineer"]
+
+    subgraph ui["UI: SQL to Data"]
+        page["Choose PostgreSQL source, validate and execute SQL,<br/>review output fields, set record limit and confirm<br/>frontend/src/SourceToDataPage.tsx<br/>frontend/src/api.ts"]
+        result["Generation status and validated draft<br/>Preview or download data"]
+    end
+
+    subgraph api["API: FastAPI"]
+        main["Mount API routes<br/>backend/tigr/main.py"]
+        routes["SQL validate, execute and generate endpoints<br/>backend/tigr/source_to_data.py"]
+        secrets["Resolve encrypted connection credentials<br/>backend/tigr/connection_testing.py<br/>backend/tigr/secrets.py"]
+        runner["Enforce read-only query, execute SQL,<br/>limit rows and validate output schema<br/>backend/tigr/source_to_data.py"]
+        services["Store generated records, version,<br/>artifact metadata and lineage<br/>backend/tigr/dataset_services.py"]
+        worker["Process generation request<br/>backend/tigr/outbox_worker.py"]
+    end
+
+    subgraph tigrdb["TIGR PostgreSQL · backend/tigr/db.py"]
+        connection["Enabled WorkspaceConnection<br/>backend/tigr/connection_models.py"]
+        query["SourceDataQuery<br/>SQL text and discovered output fields<br/>backend/tigr/source_queries.py"]
+        job["Job and OutboxEvent<br/>generation status and audit<br/>backend/tigr/jobs.py"]
+        dataset["DataSet and DataSetVersion · backend/tigr/datasets.py<br/>DataSetRecord · backend/tigr/schema_records.py<br/>lineage and validation"]
+    end
+
+    source["Approved PostgreSQL source<br/>Read-only transaction"]
+
+    user --> page
+    page -->|"REST requests"| main --> routes
+    routes -->|"List enabled source connections"| connection
+    page -->|"Validate SQL and source references"| routes
+    routes --> secrets
+    secrets --> connection
+    secrets -->|"Resolve connection URL"| runner
+    runner -->|"Read-only validation"| source
+    source -->|"Syntax and reference result"| runner
+    runner --> routes
+
+    page -->|"Execute query and discover columns"| routes
+    routes --> runner
+    runner -->|"Read-only query, bounded preview"| source
+    source -->|"Output field metadata"| runner
+    runner -->|"Save query and output fields"| query
+    runner --> routes
+    routes -->|"Return output fields; preview values omitted"| page
+
+    page -->|"Confirm and generate data set"| routes
+    routes -->|"Create version and queued job"| dataset
+    routes -->|"Persist generation event"| job
+    job --> worker
+    worker -->|"Calls run_source_query_job() in source_to_data.py"| routes
+    routes -->|"Load saved query"| query
+    routes --> secrets
+    secrets --> runner
+    runner -->|"Reexecute approved SQL, cap rows"| source
+    source -->|"Query result rows"| runner
+    runner -->|"Validated output records"| services
+    services -->|"Persist data, artifact and provenance"| dataset
+    routes -->|"Update job and audit status"| job
+    routes -->|"Return status and data set details"| result
+
+    module_note["The flow uses frontend/src/SourceToDataPage.tsx and frontend/src/api.ts; backend/tigr/main.py, source_to_data.py, connection_testing.py, secrets.py, dataset_services.py, and outbox_worker.py; plus database modules db.py, connection_models.py, source_queries.py, jobs.py, datasets.py, and schema_records.py."]
+    result ~~~ module_note
+    classDef bottomNote fill:#f6f2fa,stroke:#9c8ab0,color:#30243d
+    class module_note bottomNote

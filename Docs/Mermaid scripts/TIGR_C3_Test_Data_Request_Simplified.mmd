@@ -1,0 +1,54 @@
+﻿flowchart LR
+    qa["QA Engineer · requester"]
+    tde["Test Data Engineer · fulfiller"]
+    admin["Admin · assignment support"]
+
+    subgraph ui["UI: Test Data Request"]
+        form["Create or auto-save draft,<br/>submit and track request<br/>frontend/src/TicketsPage.tsx<br/>frontend/src/api.ts"]
+        picker["Select an open request while generating data<br/>frontend/src/TestDataRequestPicker.tsx<br/>ScenarioToDataPage.tsx · SourceToDataPage.tsx"]
+        detail["Request status, comments,<br/>notifications and linked data set"]
+    end
+
+    subgraph api["API: FastAPI"]
+        main["Mount ticket and generation routes<br/>backend/tigr/main.py"]
+        tickets["Validate and manage request lifecycle:<br/>submit, assign, start, hold, resume,<br/>cancel, close, reopen and comments<br/>backend/tigr/tickets.py"]
+        link["Link generated version to request<br/>same-workspace check and event record<br/>backend/tigr/ticket_linking.py"]
+        generation["Scenario and source generation APIs<br/>backend/tigr/scenario_api.py<br/>backend/tigr/source_to_data.py"]
+        access["Workspace membership and role checks<br/>backend/tigr/access.py<br/>backend/tigr/iam.py"]
+    end
+
+    subgraph tigrdb["TIGR PostgreSQL · backend/tigr/db.py"]
+        ticketData["Ticket and row version<br/>backend/tigr/ticket_models.py"]
+        history["TicketEvent, comments, block periods<br/>and in-app notifications<br/>backend/tigr/ticket_models.py"]
+        queue["Outbox events and generation jobs<br/>backend/tigr/jobs.py"]
+        dataset["DataSet and DataSetVersion<br/>backend/tigr/datasets.py"]
+    end
+
+    qa -->|"Draft and submit request"| form
+    form -->|"REST requests"| main --> tickets
+    tickets --> access
+    access --> tickets
+    tickets -->|"Save request and state changes"| ticketData
+    tickets -->|"Record activity and notifications"| history
+    tickets -->|"Queue notification event"| queue
+    tickets -->|"Return request details"| detail
+
+    tde -->|"Review queue, assign, clarify or fulfill"| detail
+    admin -->|"Assign to authorized TDE"| detail
+    detail -->|"Lifecycle action / comment"| form
+
+    form -->|"Request-linked generation"| picker
+    picker -->|"Select submitted request"| generation
+    generation -->|"Create version and enqueue generation"| dataset
+    generation -->|"Associate test_data_request_id"| link
+    link -->|"Update linked dataset/version"| ticketData
+    link -->|"Record dataset-linked event"| history
+    generation -->|"Persist generation job"| queue
+    tickets -->|"Return linked data set and request details"| detail
+    tickets -->|"Close with eligible published data set,<br/>or close without a data set"| dataset
+
+    module_note["The flow uses frontend/src/TicketsPage.tsx, frontend/src/TestDataRequestPicker.tsx, frontend/src/ScenarioToDataPage.tsx, frontend/src/SourceToDataPage.tsx and frontend/src/api.ts; backend/tigr/main.py, tickets.py, ticket_linking.py, scenario_api.py, source_to_data.py, access.py and iam.py; plus database modules db.py, ticket_models.py, jobs.py and datasets.py."]
+    detail ~~~ module_note
+    classDef bottomNote fill:#f6f2fa,stroke:#9c8ab0,color:#30243d
+    class module_note bottomNote
+
