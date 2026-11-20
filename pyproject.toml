@@ -1,0 +1,44 @@
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tigr"
+version = "0.1.0"
+description = "TIGR test data generation and management platform"
+requires-python = ">=3.13,<3.14"
+dependencies = [
+  "alembic>=1.16,<2",
+  "python-dotenv>=1.0,<2",
+  "fastapi>=0.135,<1",
+  "Faker>=37,<40",
+  "cryptography>=44,<46",
+  "psycopg[binary]>=3.2,<4",
+  "pgvector>=0.4,<1",
+  "PyMySQL>=1.1,<2",
+  "oracledb>=3.4,<4",
+  "pymssql>=2.3,<3",
+  "PyJWT[crypto]>=2.10,<3",
+  "pydantic-settings>=2.10,<3",
+  "sqlalchemy>=2.0.41,<3",
+  "sqlglot>=28,<29",
+  "uvicorn[standard]>=0.35,<1",
+]
+
+[project.optional-dependencies]
+dev = ["httpx>=0.28,<1", "pytest>=8.4,<9", "ruff>=0.12,<1"]
+graph = ["neo4j>=5.28,<7"]
+
+[project.scripts]
+tigr-admin = "tigr.cli:main"
+tigr-worker = "tigr.outbox_worker:main"
+
+[tool.setuptools.packages.find]
+where = ["backend"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+
+[tool.ruff.lint]
+ignore = ["B008"]
