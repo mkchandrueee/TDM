@@ -1576,7 +1576,7 @@ def download_dataset_artifact(
     # A generated artifact with zero rows is still downloadable. Keep the CSV
     # schema visible in its header so consumers can distinguish it from a
     # missing artifact; JSON naturally serializes as an empty array.
-    field_names = [str(item.get("field")) for item in (version.schema_scope or []) if item.get("field")]
+    field_names = version.selected_fields or [str(item.get("field")) for item in (version.schema_scope or []) if item.get("field")]
     record_audit(db, principal, request.state.request_id, "dataset.artifact_downloaded", "dataset_version", str(version.id), dataset.workspace_id, role,
         {"version_number": version_number, "format": extension.removeprefix("."), "privacy_state": version.privacy_state,
          "record_count": len(rows), "blocked_record_count": blocked_count})

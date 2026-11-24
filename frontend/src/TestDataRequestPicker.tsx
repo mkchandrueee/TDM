@@ -50,7 +50,7 @@ export default function TestDataRequestPicker({
     let active = true
     setLoading(true)
     setLoadError('')
-    apiRequest<{ items: TestDataRequest[] }>(`/tickets?workspace_id=${encodeURIComponent(workspaceId)}&limit=500&offset=0`, role)
+    apiRequest<{ items: TestDataRequest[] }>(`/tickets?workspace_id=${encodeURIComponent(workspaceId)}&assigned_to_me=true&status=In%20Progress&limit=500&offset=0`, role)
       .then(result => { if (active) setTickets(result.items) })
       .catch(() => { if (active) setLoadError('Test data requests could not be loaded.') })
       .finally(() => { if (active) setLoading(false) })

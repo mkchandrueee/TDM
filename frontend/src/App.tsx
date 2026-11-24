@@ -196,7 +196,7 @@ function App() {
         {error && <div className="alert alert-warning" role="status">{error}</div>}
         <DatasetUsageContext.Provider value={datasetUsage}><Routes>
           <Route path="/" element={<Dashboard key={`${workspaceId}:${role}:${devSubject}`} data={dashboard?.workspace_id === (workspaceId || null) ? dashboard : null} workspaceId={workspaceId} role={role} displayName={identity?.display_name ?? devSession?.display_name}/>}/>
-          <Route path="/tickets" element={<TicketsPage key={`${workspaceId}:${role}:${devSubject}`} role={role} workspaceId={workspaceId} workspaceName={workspaces.find((workspace) => workspace.id === workspaceId)?.name ?? ''}/>}/>
+          <Route path="/tickets" element={<TicketsPage currentSubject={identity?.subject ?? devSession?.subject ?? devSubject} key={`${workspaceId}:${role}:${devSubject}`} role={role} workspaceId={workspaceId} workspaceName={workspaces.find((workspace) => workspace.id === workspaceId)?.name ?? ''}/>}/>
           <Route path="/workspaces" element={isAdmin ? <WorkspacePage role={role} workspaces={workspaces} onRefresh={refreshWorkspaces}/> : <Navigate to="/" replace/>}/>
           <Route path="/access" element={isAdmin ? <AccessPage role={role} workspaceId={workspaceId} workspaces={workspaces} platformAdmin={identity?.platform_admin ?? false} onWorkspaceChange={(nextId)=>{setWorkspaceId(nextId);const nextRole=workspaces.find((workspace)=>workspace.id===nextId)?.role;if(nextRole)setRole(nextRole)}} onRefresh={refreshWorkspaces}/> : <Navigate to="/" replace/>}/>
           <Route path="/activities" element={<ActivitiesPage key={`${workspaceId}:${role}:${devSubject}`} role={role} workspaceId={workspaceId}/>}/>

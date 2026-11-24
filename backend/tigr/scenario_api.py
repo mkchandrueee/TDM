@@ -1642,5 +1642,5 @@ def download_scenario_artifact(
         {"version_number":version.version_number,"format":output_format,"privacy_state":version.privacy_state,
          "record_count":allowed_count,"blocked_record_count":blocked_count})
     db.commit()
-    return Response(serialize_dataset_records(rows, output_format), media_type="text/csv" if output_format == "csv" else "application/json",
+    return Response(serialize_dataset_records(rows, output_format, version.selected_fields), media_type="text/csv" if output_format == "csv" else "application/json",
                     headers={"Content-Disposition": f'attachment; filename="{dataset.reference_code}.{output_format}"'})

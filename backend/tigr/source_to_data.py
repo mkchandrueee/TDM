@@ -1796,7 +1796,12 @@ def run_source_query_job(query_id: UUID, job_id: UUID, dataset_id: UUID, version
                            "format": output_format}), service_actor)
         job.progress = 100
         job.status = "succeeded" if valid else "failed"
-        job.safe_summary = "Source query generation completed" if valid else "Query output quarantined after validation"
+        if not valid:
+            job.safe_summary = "Query output quarantined after validation"
+        elif len(rows) < volume:
+            job.safe_summary = f"Source query returned {len(rows)} of {volume} requested records"
+        else:
+            job.safe_summary = "Source query generation completed"
         for step in db.scalars(select(JobStep).where(JobStep.job_id == job.id, JobStep.name == "source_query", JobStep.status == "running")):
             step.status = "succeeded"
             step.safe_summary = "Read-only query completed"
@@ -1966,5 +1971,5 @@ def download_source_data_artifact(dataset_id: UUID, request: Request, db: Sessio
         {"version_number":version.version_number,"format":extension.removeprefix("."),"privacy_state":version.privacy_state,
          "record_count":allowed_count,"blocked_record_count":blocked_count})
     db.commit()
-    return Response(serialize_dataset_records(rows, extension.removeprefix(".")), media_type=media,
+    return Response(serialize_dataset_records(rows, extension.removeprefix("."), version.selected_fields), media_type=media,
                     headers={"Content-Disposition": f'attachment; filename="{dataset.reference_code}{extension}"'})

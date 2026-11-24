@@ -31,6 +31,10 @@ def link_generation_to_ticket(
     ).with_for_update())
     if ticket is None or ticket.status == "Draft":
         raise HTTPException(status_code=404, detail="Test data request not found in this workspace")
+    if ticket.assignee_user_id != principal.subject:
+        raise HTTPException(status_code=403, detail="Only the assigned Test Data Engineer can link a data set")
+    if ticket.status != "In Progress":
+        raise HTTPException(status_code=409, detail="Start work on the test data request before linking a data set")
     if dataset.workspace_id != ticket.workspace_id or version.dataset_id != dataset.id or version.workspace_id != workspace_id:
         raise HTTPException(status_code=422, detail="The test data request and generated data set must belong to the same workspace")
 

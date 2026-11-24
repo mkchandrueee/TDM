@@ -117,9 +117,10 @@ def _notify(db: Session, ticket: Ticket, event_type: str, request: Request, reci
                  "status": ticket.status, "summary": event_type.replace("ticket.", "").replace("_", " "), **details},
         request_id=request.state.request_id))
     now = datetime.now(UTC)
-    if recipient == "workspace:TDE":
+    workspace_roles = {"workspace:TDE": HumanRole.TEST_DATA_ENGINEER, "workspace:Admin": HumanRole.ADMIN}
+    if recipient in workspace_roles:
         recipients = list(db.scalars(select(WorkspaceMembership.subject).where(
-            WorkspaceMembership.workspace_id == ticket.workspace_id, WorkspaceMembership.role == HumanRole.TEST_DATA_ENGINEER.value,
+            WorkspaceMembership.workspace_id == ticket.workspace_id, WorkspaceMembership.role == workspace_roles[recipient].value,
             WorkspaceMembership.revoked_at.is_(None), WorkspaceMembership.valid_from <= now,
             or_(WorkspaceMembership.valid_until.is_(None), WorkspaceMembership.valid_until > now))))
     else:
@@ -133,23 +134,9 @@ def _notify(db: Session, ticket: Ticket, event_type: str, request: Request, reci
         workspace_id=ticket.workspace_id, project_id=ticket.project_id, correlation_id=ticket.correlation_id))
 
 
-def _claim_ticket_for_actor(ticket: Ticket, db: Session, request: Request,
-                            principal: Principal, role: HumanRole, reason: str) -> None:
-    previous = ticket.assignee_user_id
-    if previous == principal.subject:
-        return
-    ticket.assignee_user_id = principal.subject
-    previous_identity = db.get(UserIdentity, previous) if previous else None
-    current_identity = db.get(UserIdentity, principal.subject)
-    details = {"assigned_from": previous, "assigned_from_name": (previous_identity.display_name or previous_identity.email or previous) if previous_identity else previous,
-        "assigned_to": principal.subject, "assigned_to_name": (current_identity.display_name or current_identity.email or principal.subject) if current_identity else (principal.display_name or principal.subject),
-        "assignment_reason": reason}
-    _event(db, ticket, principal, role, "assignment_changed", request, reason=reason,
-        data={"before": previous, "after": principal.subject,
-            "before_name": details["assigned_from_name"], "after_name": details["assigned_to_name"], "automatic": True})
-    recipients = {ticket.requester_user_id, previous} - {principal.subject, None}
-    for recipient in recipients:
-        _notify(db, ticket, "ticket.assigned", request, recipient, details)
+def _require_assigned_tde(ticket: Ticket, principal: Principal, role: HumanRole) -> None:
+    if role != HumanRole.TEST_DATA_ENGINEER or ticket.assignee_user_id != principal.subject:
+        raise HTTPException(status_code=403, detail="Only the assigned Test Data Engineer can process this ticket")
 
 
 def _set_ticket_assignee(ticket: Ticket, db: Session, request: Request,
@@ -439,14 +426,14 @@ def submit_ticket(ticket_id: UUID, request: Request, body: Mutation, db: Session
     _validate_requested_dataset(db, principal, ticket.workspace_id, ticket.request_type, ticket.requested_dataset_id)
     now = datetime.now(UTC); ticket.status="Submitted"; ticket.submitted_at=now; ticket.updated_at=now; ticket.row_version += 1
     _event(db, ticket, principal, role, "submitted", request, old="Draft", new="Submitted")
-    _notify(db, ticket, "ticket.submitted", request, "workspace:TDE")
+    _notify(db, ticket, "ticket.submitted", request, "workspace:Admin")
     db.commit(); return _out(db, ticket)
 
 
 @router.post("/tickets/{ticket_id}/assign")
 def assign_ticket(ticket_id: UUID, body: Assignment, request: Request, db: Session = Depends(get_db), principal: Principal = Depends(get_principal)):
     ticket, role = _ticket(db, ticket_id, principal, lock=True)
-    if role not in (HumanRole.TEST_DATA_ENGINEER, HumanRole.ADMIN): raise HTTPException(status_code=403, detail="TDE access is required")
+    if role != HumanRole.ADMIN: raise HTTPException(status_code=403, detail="Only an Admin can assign tickets")
     if ticket.status not in OPEN: raise HTTPException(status_code=409, detail="Only open tickets can be assigned")
     if ticket.row_version != body.row_version: raise HTTPException(status_code=409, detail="Ticket changed; refresh and retry")
     if not body.reason: raise HTTPException(status_code=422, detail="Assignment reason is required")
@@ -475,8 +462,8 @@ def add_comment(ticket_id: UUID, body: CommentInput, request: Request, db: Sessi
     if ticket.status == "Draft" and role != HumanRole.QA_ENGINEER: raise HTTPException(status_code=409, detail="Draft is not visible to the queue")
     # Ticket participants may continue the conversation after closure; comments do not reopen the ticket.
     if role == HumanRole.TEST_DATA_ENGINEER and ticket.status in OPEN:
-        _claim_ticket_for_actor(ticket, db, request, principal, role, "Automatically assigned to the TDE who responded")
-    if role == HumanRole.QA_ENGINEER and ticket.status == "On Hold":
+        _require_assigned_tde(ticket, principal, role)
+    if role == HumanRole.QA_ENGINEER and ticket.status == "On Hold" and ticket.assignee_user_id == principal.subject:
         clarification = db.scalar(select(TicketBlockPeriod).where(
             TicketBlockPeriod.ticket_id == ticket.id, TicketBlockPeriod.ended_at.is_(None)))
         if clarification:
@@ -502,33 +489,30 @@ def add_comment(ticket_id: UUID, body: CommentInput, request: Request, db: Sessi
 
 @router.post("/tickets/{ticket_id}/start")
 def start_ticket(ticket_id: UUID, body: Mutation, request: Request, db: Session = Depends(get_db), principal: Principal = Depends(get_principal)):
-    return _transition(ticket_id, "In Progress", body, request, db, principal,
-        claim_assignee=True, claim_reason="Automatically assigned to the TDE who started work")
+    return _transition(ticket_id, "In Progress", body, request, db, principal)
 
 
 @router.post("/tickets/{ticket_id}/request-clarification")
 def block_ticket(ticket_id: UUID, body: Mutation, request: Request, db: Session = Depends(get_db), principal: Principal = Depends(get_principal)):
     if not body.reason: raise HTTPException(status_code=422, detail="Clarification question is required")
-    return _transition(ticket_id, "On Hold", body, request, db, principal, reason=body.reason,
-        claim_assignee=True, claim_reason="Automatically assigned to the TDE who requested clarification")
+    return _transition(ticket_id, "On Hold", body, request, db, principal, reason=body.reason)
 
 
 @router.post("/tickets/{ticket_id}/resume")
 def resume_ticket(ticket_id: UUID, body: Mutation, request: Request, db: Session = Depends(get_db), principal: Principal = Depends(get_principal)):
     ticket, role = _ticket(db, ticket_id, principal, lock=True)
-    if role != HumanRole.TEST_DATA_ENGINEER: raise HTTPException(status_code=403, detail="TDE access is required")
+    _require_assigned_tde(ticket, principal, role)
     if ticket.status != "On Hold": raise HTTPException(status_code=409, detail="Only On Hold tickets can resume")
     if ticket.row_version != body.row_version: raise HTTPException(status_code=409, detail="Ticket changed; refresh and retry")
     period = db.scalar(select(TicketBlockPeriod).where(TicketBlockPeriod.ticket_id == ticket.id, TicketBlockPeriod.ended_at.is_(None)))
     if period: period.ended_at=datetime.now(UTC); period.resolved_by_user_id=principal.subject
-    return _transition(ticket_id, "In Progress", body, request, db, principal,
-        claim_assignee=True, claim_reason="Automatically assigned to the TDE who resumed work")
+    return _transition(ticket_id, "In Progress", body, request, db, principal)
 
 
 @router.get("/tickets/{ticket_id}/share-options")
 def ticket_share_options(ticket_id: UUID, db: Session = Depends(get_db), principal: Principal = Depends(get_principal)):
     ticket, role = _ticket(db, ticket_id, principal)
-    if role != HumanRole.TEST_DATA_ENGINEER: raise HTTPException(status_code=403, detail="TDE access is required")
+    _require_assigned_tde(ticket, principal, role)
     if ticket.status != "In Progress": raise HTTPException(status_code=409, detail="Only In Progress tickets can be shared")
     now = datetime.now(UTC)
     users = db.execute(select(WorkspaceMembership.subject, UserIdentity.display_name, UserIdentity.email)
@@ -557,8 +541,8 @@ def ticket_share_options(ticket_id: UUID, db: Session = Depends(get_db), princip
 @router.get("/tickets/{ticket_id}/assignment-options")
 def ticket_assignment_options(ticket_id: UUID, db: Session = Depends(get_db), principal: Principal = Depends(get_principal)):
     ticket, role = _ticket(db, ticket_id, principal)
-    if role not in (HumanRole.TEST_DATA_ENGINEER, HumanRole.ADMIN):
-        raise HTTPException(status_code=403, detail="TDE access is required")
+    if role != HumanRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Only an Admin can assign tickets")
     now = datetime.now(UTC)
     users = db.execute(select(WorkspaceMembership.subject, UserIdentity.display_name, UserIdentity.email)
         .join(UserIdentity, UserIdentity.subject == WorkspaceMembership.subject)
@@ -572,19 +556,14 @@ def ticket_assignment_options(ticket_id: UUID, db: Session = Depends(get_db), pr
 
 
 def _transition(ticket_id: UUID, new_status: str, body: Mutation, request: Request, db: Session, principal: Principal,
-    reason: str | None = None, claim_assignee: bool = False, claim_reason: str | None = None):
+    reason: str | None = None):
     ticket, role = _ticket(db, ticket_id, principal, lock=True)
-    if role != HumanRole.TEST_DATA_ENGINEER: raise HTTPException(status_code=403, detail="TDE access is required")
+    _require_assigned_tde(ticket, principal, role)
     allowed = {"Submitted": ("In Progress", "On Hold"), "In Progress": ("On Hold",), "On Hold": ("In Progress",)}
     if new_status not in allowed.get(ticket.status, ()): raise HTTPException(status_code=409, detail=f"Cannot move {ticket.status} to {new_status}")
     if new_status == "On Hold" and not reason: raise HTTPException(status_code=422, detail="Clarification question is required")
     if ticket.row_version != body.row_version: raise HTTPException(status_code=409, detail="Ticket changed; refresh and retry")
     old=ticket.status; ticket.status=new_status; ticket.updated_at=datetime.now(UTC); ticket.row_version += 1
-    if new_status == "On Hold":
-        _set_ticket_assignee(ticket, db, request, principal, role, ticket.requester_user_id,
-            "Automatically assigned to the requester while clarification is pending")
-    elif claim_assignee and claim_reason:
-        _claim_ticket_for_actor(ticket, db, request, principal, role, claim_reason)
     if new_status == "On Hold": db.add(TicketBlockPeriod(id=uuid4(), ticket_id=ticket.id, started_at=ticket.updated_at, reason=reason, requested_by_user_id=principal.subject))
     _event(db, ticket, principal, role, "status_changed", request, old=old, new=new_status, reason=reason)
     if new_status == "In Progress": _notify(db, ticket, "ticket.started", request, ticket.requester_user_id)
@@ -595,14 +574,13 @@ def _transition(ticket_id: UUID, new_status: str, body: Mutation, request: Reque
 @router.post("/tickets/{ticket_id}/link-dataset")
 def link_dataset(ticket_id: UUID, body: LinkDataset, request: Request, db: Session = Depends(get_db), principal: Principal = Depends(get_principal)):
     ticket, role = _ticket(db, ticket_id, principal, lock=True)
-    if role != HumanRole.TEST_DATA_ENGINEER: raise HTTPException(status_code=403, detail="TDE access is required")
+    _require_assigned_tde(ticket, principal, role)
     if ticket.row_version != body.row_version: raise HTTPException(status_code=409, detail="Ticket changed; refresh and retry")
     ds = db.get(DataSet, body.dataset_id); ver = db.get(DataSetVersion, body.version_id)
     if not ds or not ver or ds.workspace_id != ticket.workspace_id or ver.dataset_id != ds.id or ver.workspace_id != ticket.workspace_id:
         raise HTTPException(status_code=422, detail="Dataset version is unavailable in this workspace")
     if ver.lifecycle_state not in ("draft", "ready", "published"):
         raise HTTPException(status_code=409, detail="Only draft, ready, or published dataset versions can be linked")
-    _claim_ticket_for_actor(ticket, db, request, principal, role, "Automatically assigned to the TDE who linked the dataset")
     ticket.linked_dataset_id=ds.id; ticket.linked_dataset_version_id=ver.id; ticket.updated_at=datetime.now(UTC); ticket.row_version += 1
     _event(db, ticket, principal, role, "dataset_linked", request, data={"dataset_id": str(ds.id), "version_id": str(ver.id)})
     db.commit(); return _out(db, ticket, detail=True)
@@ -611,7 +589,7 @@ def link_dataset(ticket_id: UUID, body: LinkDataset, request: Request, db: Sessi
 @router.post("/tickets/{ticket_id}/close")
 def close_ticket(ticket_id: UUID, body: CloseInput, request: Request, db: Session = Depends(get_db), principal: Principal = Depends(get_principal)):
     ticket, role = _ticket(db, ticket_id, principal, lock=True)
-    if role != HumanRole.TEST_DATA_ENGINEER: raise HTTPException(status_code=403, detail="Only the assigned workspace TDE can close tickets")
+    _require_assigned_tde(ticket, principal, role)
     idempotency_key = request.headers.get("Idempotency-Key")
     if ticket.status == "Closed" and idempotency_key:
         prior = db.scalar(select(TicketEvent).where(TicketEvent.ticket_id == ticket.id, TicketEvent.event_type == "closed",
@@ -645,7 +623,6 @@ def close_ticket(ticket_id: UUID, body: CloseInput, request: Request, db: Sessio
             WorkspaceMembership.revoked_at.is_(None), WorkspaceMembership.valid_from <= now_check,
             or_(WorkspaceMembership.valid_until.is_(None), WorkspaceMembership.valid_until > now_check))):
             raise HTTPException(status_code=409, detail="Requester access could not be verified")
-    _claim_ticket_for_actor(ticket, db, request, principal, role, "Automatically assigned to the TDE who closed the ticket")
     ticket.linked_dataset_id=ds.id if ds else None; ticket.linked_dataset_version_id=ver.id if ver else None
     now=datetime.now(UTC); ticket.status="Closed"; ticket.closed_at=now; ticket.closure_actor_user_id=principal.subject
     ticket.fulfillment_summary=body.fulfillment_summary; ticket.updated_at=now; ticket.row_version += 1
@@ -665,6 +642,7 @@ def cancel_ticket(ticket_id: UUID, body: Mutation, request: Request, db: Session
     if role == HumanRole.QA_ENGINEER:
         if ticket.requester_user_id != principal.subject or ticket.status not in ("Draft","Submitted"): raise HTTPException(status_code=403,detail="You can cancel only your Draft or unstarted Submitted ticket")
     elif role == HumanRole.TEST_DATA_ENGINEER:
+        _require_assigned_tde(ticket, principal, role)
         if ticket.status not in OPEN: raise HTTPException(status_code=409,detail="Only open tickets can be cancelled by a TDE")
     else: raise HTTPException(status_code=403,detail="TDE access is required")
     if ticket.row_version != body.row_version: raise HTTPException(status_code=409,detail="Ticket changed; refresh and retry")
@@ -677,7 +655,7 @@ def cancel_ticket(ticket_id: UUID, body: Mutation, request: Request, db: Session
 @router.post("/tickets/{ticket_id}/reopen")
 def reopen_ticket(ticket_id: UUID, body: Mutation, request: Request, db: Session = Depends(get_db), principal: Principal = Depends(get_principal)):
     ticket,role=_ticket(db,ticket_id,principal,lock=True)
-    if role != HumanRole.TEST_DATA_ENGINEER: raise HTTPException(status_code=403,detail="TDE access is required")
+    _require_assigned_tde(ticket, principal, role)
     if ticket.status != "Closed" or not body.reason: raise HTTPException(status_code=409,detail="A closed ticket and a reopen reason are required")
     now_check=datetime.now(UTC)
     if not db.scalar(select(WorkspaceMembership.subject).where(WorkspaceMembership.workspace_id == ticket.workspace_id,
@@ -686,7 +664,6 @@ def reopen_ticket(ticket_id: UUID, body: Mutation, request: Request, db: Session
         or_(WorkspaceMembership.valid_until.is_(None), WorkspaceMembership.valid_until > now_check))):
         raise HTTPException(status_code=409,detail="Requester workspace access must be restored before reopening")
     if ticket.row_version != body.row_version: raise HTTPException(status_code=409,detail="Ticket changed; refresh and retry")
-    _claim_ticket_for_actor(ticket, db, request, principal, role, "Automatically assigned to the TDE who reopened the ticket")
     previous=ticket.closed_at; now=datetime.now(UTC); ticket.status="In Progress"; ticket.closed_at=None; ticket.reopened_at=now; ticket.updated_at=now; ticket.row_version += 1
     _event(db,ticket,principal,role,"reopened",request,old="Closed",new="In Progress",reason=body.reason,data={"prior_closed_at":previous.isoformat() if previous else None})
     _notify(db,ticket,"ticket.reopened",request,ticket.requester_user_id,{"reason":body.reason}); db.commit(); return _out(db,ticket,detail=True)

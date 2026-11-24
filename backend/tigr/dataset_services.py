@@ -207,14 +207,16 @@ def dataset_records_privacy_ready(version: DataSetVersion) -> bool:
 def serialize_dataset_records(
     rows: list[dict], output_format: str, field_names: list[str] | None = None,
 ) -> bytes:
+    fields = list(dict.fromkeys([*(field_names or []), *(rows[0] if rows else [])]))
     if output_format == "csv":
         buffer = StringIO(newline="")
-        fields = list(rows[0].keys()) if rows else list(field_names or [])
         writer = csv.DictWriter(buffer, fieldnames=fields, extrasaction="ignore", lineterminator="\n")
         writer.writeheader()
         for row in rows:
             writer.writerow({key: ("'" + str(value) if isinstance(value, str) and value.lstrip().startswith(("=", "+", "-", "@", "\t", "\r", "\n")) else value) for key, value in row.items()})
         return buffer.getvalue().encode("utf-8")
+    if field_names:
+        rows = [{**{field: row[field] for field in field_names if field in row}, **row} for row in rows]
     return json.dumps(rows, ensure_ascii=False, separators=(",", ":"), default=str).encode("utf-8")
 
 

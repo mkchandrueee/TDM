@@ -35,7 +35,7 @@ type TicketActionDialog = {action:string;title:string;confirmLabel:string;fields
 type TicketShareOptions = {users:{subject:string;display_name:string;email:string|null}[];datasets:{id:string;name:string;reference_code:string}[]}
 type RequestDatasetOption = {id:string;name:string;reference_code:string;latest_version:{lifecycle_state:string;publication_state:string}}
 
-export default function TicketsPage({ role, workspaceId, workspaceName }: {role: HumanRole; workspaceId: string; workspaceName: string}) {
+export default function TicketsPage({ role, workspaceId, workspaceName, currentSubject }: {currentSubject: string; role: HumanRole; workspaceId: string; workspaceName: string}) {
   const location = useLocation()
   const [items, setItems] = useState<Ticket[]>([])
   const [ticketTotal, setTicketTotal] = useState(0)
@@ -283,7 +283,12 @@ export default function TicketsPage({ role, workspaceId, workspaceName }: {role:
   ].sort((a,b)=>new Date(a.when).getTime()-new Date(b.when).getTime()) : []
   const latestTimelineEntry = timeline[timeline.length-1]
   const noDatasetSelected = shareForm.dataset_id===NO_DATASET
-  const qaCommentDisabled = role==='QA Engineer' && selected?.status==='Closed'
+  const isAssignedEngineer = role==='Test Data Engineer' && selected?.assignee_user_id===currentSubject
+  const commentDisabledReason = role==='QA Engineer' && selected?.status==='Closed'
+    ? 'Comments are unavailable to QA on closed tickets'
+    : role==='Test Data Engineer' && selected && ['Submitted','In Progress','On Hold'].includes(selected.status) && !isAssignedEngineer
+      ? 'Only the assigned Test Data Engineer can comment on this open ticket'
+      : ''
   const selectedRequestDataset=requestDatasets.find(dataset=>dataset.id===form.requested_dataset_id)
   const ticketStart=ticketTotal?(ticketPage-1)*TICKET_PAGE_SIZE+1:0
   const ticketEnd=Math.min(ticketPage*TICKET_PAGE_SIZE,ticketTotal)
@@ -379,12 +384,12 @@ export default function TicketsPage({ role, workspaceId, workspaceName }: {role:
       {selected.dataset?<div className="ticket-dataset ticket-dataset-corner"><h3>Linked dataset</h3><strong>{selected.dataset.name||selected.dataset.reference_code}</strong><p>{selected.dataset.reference_code||'—'}</p><span className={`status-badge dataset-version-status lifecycle-${selected.dataset.state.toLowerCase().replaceAll(' ','-')}`}><span>Version {selected.dataset.version_number??'—'}</span><span className="dataset-version-separator" aria-hidden="true">·</span><span>{selected.dataset.state}</span></span>{selected.fulfillment_summary&&<p>{selected.fulfillment_summary}</p>}<Link to={`/datasets?dataset_id=${encodeURIComponent(selected.linked_dataset_id||'')}${selected.dataset.version_number?`&version_number=${selected.dataset.version_number}`:''}`}>Open linked data set</Link></div>:selected.status==='Closed'&&!selected.linked_dataset_id&&<div className="ticket-dataset ticket-dataset-corner ticket-dataset-unassigned"><h3>Linked dataset</h3><strong>No data set assigned</strong><p className="ticket-dataset-closed">Ticket is closed</p><p>Please check comments for further details.</p></div>}
     </div>
       <div className="ticket-detail-topline"><h3>Request details</h3><div className="ticket-actionbar">{selected.status==='Draft'&&role==='QA Engineer'&&<><button type="button" className="button button-secondary" onClick={()=>editDraft()}>Edit draft</button><button type="button" className="button button-primary" onClick={()=>void act('submit')}>Submit request</button></>}
-        {['Submitted','On Hold'].includes(selected.status)&&role==='Test Data Engineer'&&<button type="button" className="button button-primary" onClick={()=>void act(selected.status==='On Hold'?'resume':'start')}>{selected.status==='On Hold'?'Resume work':'Acknowledge and start'}</button>}
-        {['Submitted','In Progress'].includes(selected.status)&&role==='Test Data Engineer'&&<button type="button" className="button button-secondary" onClick={()=>showActionDialog('request-clarification','Request clarification','Send request',[{name:'reason',label:'Clarification question',placeholder:'Describe the information needed',multiline:true}])}>Request clarification</button>}
-        {['Submitted','In Progress','On Hold'].includes(selected.status)&&(role==='Test Data Engineer'||role==='Admin')&&<button type="button" className="button button-secondary" onClick={()=>void showAssignDialog()}>Assign ticket</button>}
-        {selected.status==='In Progress'&&role==='Test Data Engineer'&&<button type="button" className="button button-primary" onClick={()=>void openShareDialog()}>Share data set</button>}
-        {selected.status==='Closed'&&role==='Test Data Engineer'&&<button type="button" className="button button-secondary" onClick={()=>showActionDialog('reopen','Reopen ticket','Reopen ticket',[{name:'reason',label:'Reason for reopening',placeholder:'Explain why this ticket needs to be reopened',multiline:true}])}>Reopen</button>}
-        {['Draft','Submitted','In Progress','On Hold'].includes(selected.status)&&<button type="button" className="button button-secondary" onClick={()=>showActionDialog('cancel','Cancel request','Cancel request',[{name:'reason',label:'Cancellation reason',placeholder:'Explain why this request is being cancelled',multiline:true}])}>Cancel request</button>}
+        {['Submitted','On Hold'].includes(selected.status)&&isAssignedEngineer&&<button type="button" className="button button-primary" onClick={()=>void act(selected.status==='On Hold'?'resume':'start')}>{selected.status==='On Hold'?'Resume work':'Acknowledge and start'}</button>}
+        {['Submitted','In Progress'].includes(selected.status)&&isAssignedEngineer&&<button type="button" className="button button-secondary" onClick={()=>showActionDialog('request-clarification','Request clarification','Send request',[{name:'reason',label:'Clarification question',placeholder:'Describe the information needed',multiline:true}])}>Request clarification</button>}
+        {['Submitted','In Progress','On Hold'].includes(selected.status)&&role==='Admin'&&<button type="button" className="button button-secondary" onClick={()=>void showAssignDialog()}>Assign ticket</button>}
+        {selected.status==='In Progress'&&isAssignedEngineer&&<button type="button" className="button button-primary" onClick={()=>void openShareDialog()}>Share data set</button>}
+        {selected.status==='Closed'&&isAssignedEngineer&&<button type="button" className="button button-secondary" onClick={()=>showActionDialog('reopen','Reopen ticket','Reopen ticket',[{name:'reason',label:'Reason for reopening',placeholder:'Explain why this ticket needs to be reopened',multiline:true}])}>Reopen</button>}
+        {((role==='QA Engineer'&&['Draft','Submitted'].includes(selected.status))||(isAssignedEngineer&&['Submitted','In Progress','On Hold'].includes(selected.status)))&&<button type="button" className="button button-secondary" onClick={()=>showActionDialog('cancel','Cancel request','Cancel request',[{name:'reason',label:'Cancellation reason',placeholder:'Explain why this request is being cancelled',multiline:true}])}>Cancel request</button>}
       </div></div>
       <div className="ticket-detail-grid"><section className="ticket-info"><section className="ticket-detail-group"><h4>Ticket overview</h4><dl className="ticket-detail-fields">
           <div className="ticket-detail-field"><dt>Workspace</dt><dd>{selected.workspace_name||workspaceName||'—'}</dd></div>
@@ -409,7 +414,7 @@ export default function TicketsPage({ role, workspaceId, workspaceName }: {role:
         </dl></section>
         </section>
         <section className="ticket-history"><h3>Activity & comments</h3><ol ref={activityListRef}>{timeline.map(entry=><li className={`timeline-${entry.kind}`} key={`${entry.kind}-${entry.id}`}><div className="ticket-history-event-heading"><b>{entry.title}</b><time>{stamp(entry.when)}</time></div><p><strong>{entry.actor}</strong>{entry.role&&<span className="ticket-history-role"> · {entry.role}</span>}{entry.detail&&<span className={`ticket-history-detail${entry.kind==='comment'||(entry.kind==='event'&&entry.title!=='Status changed'&&entry.title!=='Assignee changed')?' ticket-history-detail-next-line':''}`}>{entry.kind==='event'&&(entry.title==='Status changed'||entry.title==='Assignee changed')?' · ':' '}{entry.detail}</span>}</p></li>)}</ol>
-          <form onSubmit={addComment}><textarea className="ticket-comment-field" aria-label="Add a comment" value={comment} onChange={e=>setComment(e.target.value)} disabled={qaCommentDisabled} placeholder="Add a comment or clarification response"/><button className={`button ticket-comment-submit${qaCommentDisabled?' ticket-comment-disabled':''}`} disabled={!comment.trim()||qaCommentDisabled} title={qaCommentDisabled?'Comments are unavailable to QA on closed tickets':undefined}>Add comment</button></form>
+          <form onSubmit={addComment}><textarea className="ticket-comment-field" aria-label="Add a comment" value={comment} onChange={e=>setComment(e.target.value)} disabled={Boolean(commentDisabledReason)} placeholder="Add a comment or clarification response"/><button className={`button ticket-comment-submit${Boolean(commentDisabledReason)?' ticket-comment-disabled':''}`} disabled={!comment.trim()||Boolean(commentDisabledReason)} title={commentDisabledReason||undefined}>Add comment</button></form>
         </section></div>
     </article>}
     {shareDialogOpen&&<Modal title={noDatasetSelected?'Close ticket without a data set':'Share published data set and close'} onClose={()=>setShareDialogOpen(false)} footer={<><button type="button" className="button button-secondary" onClick={()=>setShareDialogOpen(false)}>Cancel</button><button type="submit" form="ticket-share-form" className="button button-confirm" disabled={shareOptionsLoading||!shareForm.dataset_id||(!noDatasetSelected&&!shareForm.shared_with_user_id)||!shareForm.fulfillment_summary.trim()}>{noDatasetSelected?'Close ticket':'Share and close'}</button></>}>
